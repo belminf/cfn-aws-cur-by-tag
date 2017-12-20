@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  GetTagFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambdas.get_tags
+      Runtime: python3.6
+      Policies:
+        - AWSLambdaBasicExecutionRole   # Managed policy
+        - Version: '2012-10-17'         # AWS Config put policy
+          Statement:
+            - Effect: Allow
+              Action:
+                - config:Put*
+              Resource: '*'
+        - Version: '2012-10-17'         # EC2 describe policy
+          Statement:
+            - Effect: Allow
+              Action:
+                - ec2:Describe*
+              Resource: '*'
