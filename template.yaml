@@ -3,19 +3,19 @@ Transform: AWS::Serverless-2016-10-31
 
 Parameters:
 
-  TagKey:
+  TagKeyParam:
     Type: String
     Description: Cost allocation tag to breakup report by
 
-  AthenaDB:
+  AthenaDBParam:
     Type: String
     Description: Athena database with CUR
 
-    AthenaTable:
+  AthenaTableParam:
     Type: String
     Description: Athena table with CUR
 
-  OutputBucket:
+  OutputBucketParam:
     Type: String
     Description: S3 bucket to use for reports generated
 
@@ -32,10 +32,10 @@ Resources:
         - AmazonS3FullAccess
       Environment:
         Variables:
-          TAG_KEY: !Ref TagKey
-          ATHENA_DB: !Ref AthenaDB
-          ATHENA_TABLE: !Ref AthenaTable
-          OUTPUT_BUCKET: !Ref OutputBucket
+          TAG_KEY: !Ref TagKeyParam
+          ATHENA_DB: !Ref AthenaDBParam
+          ATHENA_TABLE: !Ref AthenaTableParam
+          OUTPUT_BUCKET: !Ref OutputBucketParam
 
   QueryAthenaFunction:
     Type: AWS::Serverless::Function
@@ -48,9 +48,9 @@ Resources:
         - AmazonS3FullAccess
       Environment:
         Variables:
-          TAG_KEY: !Ref TagKey
-          ATHENA_DB: !Ref AthenaDB
-          ATHENA_TABLE: !Ref AthenaTable
+          TAG_KEY: !Ref TagKeyParam
+          ATHENA_DB: !Ref AthenaDBParam
+          ATHENA_TABLE: !Ref AthenaTableParam
 
   CopyFinalCSVFunction:
     Type: AWS::Serverless::Function
@@ -63,6 +63,6 @@ Resources:
         - AmazonS3FullAccess
       Environment:
         Variables:
-          TAG_KEY: !Ref TagKey
-          ATHENA_DB: !Ref AthenaDB
-          ATHENA_TABLE: !Ref AthenaTable
+          TAG_KEY: !Ref TagKeyParam
+          ATHENA_DB: !Ref AthenaDBParam
+          ATHENA_TABLE: !Ref AthenaTableParam
