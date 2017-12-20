@@ -7,19 +7,19 @@ Needs IAM role with:
 * Lambda basic exec
 
 ### 1. get_tags
-Desc: Get tags on an Athena update
-Trigger: Adding to the Athena CUR folder?
-Output: $bucket/tags/$year/$m/<ID>.csv
+* Desc: Get tags on an Athena update
+* Trigger: Adding to the Athena CUR folder?
+* Output: $bucket/tags/$year/$m/<ID>.csv
 
 ### 2. query_athena
-Desc: Query Athena for tag and month
-Trigger: $bucket/tags/\*.csv
-Output: $bucket/athena_out/$y/$m/$tag/<ID>.csv
+* Desc: Query Athena for tag and month
+* Trigger: $bucket/tags/\*.csv
+* Output: $bucket/athena_out/$y/$m/$tag/<ID>.csv
 
 ### 3. copy_final_csv
-Desc: Copy Athena output to human readable file
-Trigger: $bucket/athena_out/\*.csv
-Output: $bucket/reports/$tag/$y-$m.csv
+* Desc: Copy Athena output to human readable file
+* Trigger: $bucket/athena_out/\*.csv
+* Output: $bucket/reports/$tag/$y-$m.csv
 
 ## Considerations
 * Currently doesn't clean up Athena query output S3 files ($bucket/athena_out and $bucket/tags)
