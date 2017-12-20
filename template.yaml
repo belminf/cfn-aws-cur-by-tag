@@ -1,20 +1,27 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
+
 Parameters:
+
   TagKey:
     Type: String
     Description: Cost allocation tag to breakup report by
+
   AthenaDB:
     Type: String
     Description: Athena database with CUR
-  AthenaTable:
+
+    AthenaTable:
     Type: String
     Description: Athena table with CUR
+
   OutputBucket:
     Type: String
     Description: S3 bucket to use for reports generated
+
 Resources:
-  GetTagFunction:
+
+  GetTagsFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: lambdas.get_tags
@@ -29,3 +36,33 @@ Resources:
           ATHENA_DB: !Ref AthenaDB
           ATHENA_TABLE: !Ref AthenaTable
           OUTPUT_BUCKET: !Ref OutputBucket
+
+  QueryAthenaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambdas.query_athena
+      Runtime: python3.6
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonAthenaFullAccess
+        - AmazonS3FullAccess
+      Environment:
+        Variables:
+          TAG_KEY: !Ref TagKey
+          ATHENA_DB: !Ref AthenaDB
+          ATHENA_TABLE: !Ref AthenaTable
+
+  CopyFinalCSVFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambdas.copy_final_csv
+      Runtime: python3.6
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonAthenaFullAccess
+        - AmazonS3FullAccess
+      Environment:
+        Variables:
+          TAG_KEY: !Ref TagKey
+          ATHENA_DB: !Ref AthenaDB
+          ATHENA_TABLE: !Ref AthenaTable
