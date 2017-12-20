@@ -22,6 +22,7 @@ Needs IAM role with:
 * Output: $bucket/reports/$tag/$y-$m.csv
 
 ## Considerations
+* **Important:** Lambda IAM role is way too open, could be locked down significantly
 * Currently doesn't clean up Athena query output S3 files ($bucket/athena_out and $bucket/tags)
 * Doesn't create a report for non-tagged items
 * Not sure how it'll do with single digit months; we'll find it in January!
