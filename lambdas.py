@@ -5,10 +5,10 @@ import re
 def get_tags(event, context):
 
     # Pull relevant env
-    tag_key = os.environ['tag_key']
-    db = os.environ['athena_db']
-    table = os.environ['athena_table']
-    bucket = os.environ['output_bucket']
+    tag_key = os.environ['TAG_KEY']
+    db = os.environ['ATHENA_DB']
+    table = os.environ['ATHENA_TABLE']
+    bucket = os.environ['OUTPUT_BUCKET']
 
     # Get year and month
     key = event['Records'][0]['s3']['object']['key']
@@ -36,9 +36,9 @@ def get_tags(event, context):
 def query_athena(event, context):
 
     # Pull relevant env
-    tag_key = os.environ['tag_key']
-    db = os.environ['athena_db']
-    table = os.environ['athena_table']
+    tag_key = os.environ['TAG_KEY']
+    db = os.environ['ATHENA_DB']
+    table = os.environ['ATHENA_TABLE']
 
     # Get info from event
     key = event['Records'][0]['s3']['object']['key']
@@ -73,9 +73,9 @@ def query_athena(event, context):
 def copy_final_csv(event, context):
 
     # Pull relevant env
-    tag_key = os.environ['tag_key']
-    db = os.environ['athena_db']
-    table = os.environ['athena_table']
+    tag_key = os.environ['TAG_KEY']
+    db = os.environ['ATHENA_DB']
+    table = os.environ['ATHENA_TABLE']
 
     # Get info from event
     key = event['Records'][0]['s3']['object']['key']
