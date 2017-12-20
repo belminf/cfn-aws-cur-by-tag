@@ -1,4 +1,10 @@
 # sam-aws-cur-by-tag
+
+## Setup
+0. Deploy SAM template
+1. Create stack that takes CUR data and partitions it for Athena
+2. Create Lambda triggers for functions below
+
 ## Lambda functions
 
 Needs IAM role with:
