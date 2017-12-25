@@ -17,7 +17,7 @@ Parameters:
 
   OutputBucketParam:
     Type: String
-    Description: S3 bucket to use for reports generated
+    Description: S3 bucket to use for reports generated (must not exist already)
 
 Resources:
 
@@ -66,3 +66,57 @@ Resources:
           TAG_KEY: !Ref TagKeyParam
           ATHENA_DB: !Ref AthenaDBParam
           ATHENA_TABLE: !Ref AthenaTableParam
+
+  QueryAthenaS3Permission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt QueryAthenaFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub arn:aws:s3:::${OutputBucketParam}
+
+  CopyFinalCSVPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt CopyFinalCSVFunction.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Sub arn:aws:s3:::${OutputBucketParam}
+
+  OutputBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref OutputBucketParam
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Function: !GetAtt QueryAthenaFunction.Arn
+            Event: "s3:ObjectCreated:*"
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: tags/
+                  - Name: suffix
+                    Value: .csv
+          - Function: !GetAtt CopyFinalCSVFunction.Arn
+            Event: "s3:ObjectCreated:*"
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: athena_out/
+                  - Name: suffix
+                    Value: .csv
+    DependsOn:
+      - QueryAthenaS3Permission
+      - CopyFinalCSVPermission
+
+Outputs:
+  GetTagsFunction:
+    Value: !Ref GetTagsFunction
+    Description: Lambda function to by triggered by Athena CUR bucket
+  ReportBucket:
+    Value: !Ref OutputBucketParam
+    Description: Bucket reports are being saved to
