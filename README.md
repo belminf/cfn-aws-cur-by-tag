@@ -6,7 +6,7 @@ Essentially, you need to setup the cost allocation tag, the CUR report, partitio
 ### 1. Cost allocation tag
 This could be configured on your AWS Billing Console. See [AWS documentation](http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html) for details.
 
-### 2. 2. Cost and Usage report (CUR)
+### 2. Cost and Usage report (CUR)
 This could also be configured on your AWS Billing Console or via the CLI. The important variables:
 
 * Report name (`$CUR_NAME`): Just has to be unique
@@ -34,7 +34,7 @@ The CloudFormation has 3 parameters that are worth taking a note of:
 * `S3BucketName`: Bucket where your Athena CUR data is partitioned	
 * `s3CURBucket`: Bucket where your original CUR reports are saved by AWS (`$CUR_BUCKET` from previous step)
 
-### 4, Deploy and configure the Lambda functions
+### 4. Deploy and configure the Lambda functions
 Finally, you could deploy this stack using SAM. The stack consist of an S3 bucket and 3 Lambda functions:
 
 1. `get_tags`: Exports the values of the cost allocation tag you want to breakup your report by.
@@ -67,9 +67,9 @@ aws cloudformation deploy --template-file ${CFN_TEMPLATE} --stack-name ${CFN_STA
 
 ```
 
-### 4. Create S3 trigger for Lambda function
+### 5. Create S3 trigger for Lambda function
 
-Once the stack is created, you need to configure the S3 trigger.
+Finally, once the stack is created, you need to configure the S3 trigger.
 
 ## Considerations
 * **Important:** Lambda IAM role is way too open, could be locked down significantly
