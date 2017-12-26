@@ -7,17 +7,19 @@ Parameters:
     Type: String
     Description: Cost allocation tag to breakup report by
 
+  OutputBucketParam:
+    Type: String
+    Description: S3 bucket to use for reports generated (must not exist already)
+
   AthenaDBParam:
     Type: String
+    Default: aws_billing_report
     Description: Athena database with CUR
 
   AthenaTableParam:
     Type: String
+    Default: my_cur_report
     Description: Athena table with CUR
-
-  OutputBucketParam:
-    Type: String
-    Description: S3 bucket to use for reports generated (must not exist already)
 
 Resources:
 
