@@ -81,7 +81,7 @@ For `$GET_TAGS_ARN`, you could retrieve that from the `GetTagsFunctionArn` outpu
 $ aws cloudformation describe-stacks --stack-name bf-cur-by-tag-sam --query 'Stacks[0].Outputs'
 ```
 
-Finally, to setup the Lambda trigger, you'd use a command like this:
+Finally, to setup the S3 trigger, you could configure it via the AWS Console on the Lambda function or by using a command like this:
 
 ```bash
 # Modify the following env vars
