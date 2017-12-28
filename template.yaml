@@ -116,8 +116,8 @@ Resources:
       - CopyFinalCSVPermission
 
 Outputs:
-  GetTagsFunction:
-    Value: !Ref GetTagsFunction
+  GetTagsFunctionArn:
+    Value: !GetAtt GetTagsFunction.Arn
     Description: Lambda function to by triggered by Athena CUR bucket
   ReportBucket:
     Value: !Ref OutputBucketParam
