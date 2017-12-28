@@ -16,11 +16,12 @@ This could also be configured on your AWS Billing Console or via the CLI. The im
 For CLI, this is what it would look like:
 
 ```bash
+# Modify the following env vars
 $ CUR_NAME=cur_foobar
 $ TIME_UNIT=HOURLY
 $ CUR_BUCKET=my_cur_bucket
 
-$ aws cur put-report-definition --report-definition 'ReportName=${CUR_NAME},S3Bucket=${CUR_BUCKET},TimeUnit=${TIME_UNIT},Format=textORcsv,Compression=GZIP,AdditionalSchemaElements=RESOURCES,S3Prefix="",S3Region=us-east-1,AdditionalArtifacts=QUICKSIGHT'
+$ aws cur put-report-definition --report-definition "ReportName=${CUR_NAME},S3Bucket=${CUR_BUCKET},TimeUnit=${TIME_UNIT},Format=textORcsv,Compression=GZIP,AdditionalSchemaElements=RESOURCES,S3Prefix='',S3Region=us-east-1,AdditionalArtifacts=QUICKSIGHT"
 ```
 
 ### 3. Athena partitioning of CUR data
@@ -50,11 +51,9 @@ If you use the CloudFormation stack for the AWS blog post, you could leave `Athe
 To create the Lambda functions using the SAM template in this repo:
 
 ```bash
-# Configure variables for params
+# Modify the following env vars
 $ TAG_KEY=business_unit
 $ OUTPUT_BUCKET=my-cur-reports
-
-# Configure variables for CloudFormation stack
 $ CFN_TEMPLATE=/tmp/serverless-output.yaml 
 $ CFN_STACK=cur-by-tag-stack
 $ SAM_BUCKET=cur-by-tag-code
@@ -63,13 +62,35 @@ $ SAM_BUCKET=cur-by-tag-code
 aws cloudformation package --template-file template.yaml --output-template-file ${CFN_TEMPLATE} --s3-bucket ${S3_BUCKET}
 
 # Deploy CloudFormation stack
-aws cloudformation deploy --template-file ${CFN_TEMPLATE} --stack-name ${CFN_STACK} --capabilities CAPABILITY_IAM --parameter-overrides TagKeyParam='${TAG_KEY}' OutputBucketParam='${OUTPUT_BUCKET}'
+aws cloudformation deploy --template-file ${CFN_TEMPLATE} --stack-name ${CFN_STACK} --capabilities CAPABILITY_IAM --parameter-overrides TagKeyParam="${TAG_KEY}" OutputBucketParam="${OUTPUT_BUCKET}"
 
 ```
 
 ### 5. Create S3 trigger for Lambda function
 
-Finally, once the stack is created, you need to configure the S3 trigger.
+Finally, once the stack is created, you need to configure the S3 trigger. To do this, you need two items:
+
+1. `$CUR_BUCKET`: S3 bucket with the Athena partitioned CUR data
+2. `$GET_TAGS_ARN`: Lambda ARN of the `get_tags` function
+
+You could get `$CUR_BUCKET` from the parameters of the CloudFormation stack brought up in the 3rd section above.
+
+For `$GET_TAGS_ARN`, you could retrieve that from the `GetTagsFunctionArn` output of the CloudFormation stack brought up in the 4th section. This could be retrieved via the AWS Console or via the CLI with a command like this:
+
+```bash
+$ aws cloudformation describe-stacks --stack-name bf-cur-by-tag-sam --query 'Stacks[0].Outputs'
+```
+
+Finally, to setup the Lambda trigger, you'd use a command like this:
+
+```bash
+# Modify the following env vars
+$ CUR_BUCKET=my_athena_cur_data
+$ GET_TAGS_ARN=arn:aws:lambda:us-east-1:xxxxxx:function:xxxxxx-GetTagsFunction-xxxxxxxxx
+
+# Sets up for the Lambda function to be triggered by new data in the S3 bucket
+$ aws s3api put-bucket-notification-configuration --bucket $CUR_BUCKET --notification-configuration '{"LambdaFunctionConfigurations":[{"LambdaFunctionArn":"'${GET_TAGS_ARN}'","Events":["s3:ObjectCreated:*"],"Filter":{"Key":{"FilterRules":[{"Name":"Prefix","Value":"year="},{"Name":"Suffix","Value":".csv"}]}}}]}'
+```
 
 ## Considerations
 * **Important:** Lambda IAM role is way too open, could be locked down significantly
