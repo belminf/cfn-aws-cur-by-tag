@@ -23,51 +23,210 @@ Parameters:
 
 Resources:
 
-  GetTagsFunction:
-    Type: AWS::Serverless::Function
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
     Properties:
-      Handler: lambdas.get_tags
-      Runtime: python3.6
+      Path: '/'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
       Policies:
-        - AWSLambdaBasicExecutionRole
-        - AmazonAthenaFullAccess
-        - AmazonS3FullAccess
+        - PolicyName: cloudwatch_logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: s3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:*
+                Resource: '*'
+        - PolicyName: athena
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - athena:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - glue:CreateDatabase
+                  - glue:DeleteDatabase
+                  - glue:GetDatabase
+                  - glue:GetDatabases
+                  - glue:UpdateDatabase
+                  - glue:CreateTable
+                  - glue:DeleteTable
+                  - glue:BatchDeleteTable
+                  - glue:UpdateTable
+                  - glue:GetTable
+                  - glue:GetTables
+                  - glue:BatchCreatePartition
+                  - glue:CreatePartition
+                  - glue:DeletePartition
+                  - glue:BatchDeletePartition
+                  - glue:UpdatePartition
+                  - glue:GetPartition
+                  - glue:GetPartitions
+                  - glue:BatchGetPartition
+                Resource: '*'
+
+  GetTagsFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.6
+      Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           TAG_KEY: !Ref TagKeyParam
           ATHENA_DB: !Ref AthenaDBParam
           ATHENA_TABLE: !Ref AthenaTableParam
           OUTPUT_BUCKET: !Ref OutputBucketParam
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          import re
+          
+          def handler(event, context):
+          
+              # Pull relevant env
+              tag_key = os.environ['TAG_KEY']
+              db = os.environ['ATHENA_DB']
+              table = os.environ['ATHENA_TABLE']
+              bucket = os.environ['OUTPUT_BUCKET']
+          
+              # Get year and month
+              key = event['Records'][0]['s3']['object']['key']
+              date_match = re.match(r'^year=(\d{4})/month=(\d{1,2})/.*\.csv$', key)
+              if not date_match:
+                  print('Error: Invalid Athena partition key: {}'.format(key))
+                  return False
+              year, month = date_match.groups()
+          
+              # Init boto clients
+              athena = boto3.client('athena')
+          
+              # Build query
+              query = "SELECT DISTINCT resourcetags_user_{tag_key} FROM {table} WHERE resourcetags_user_{tag_key} != '';".format(**locals())
+          
+              response = athena.start_query_execution(
+                  QueryString=query,
+                  QueryExecutionContext={'Database': db,},
+                  ResultConfiguration={'OutputLocation': 's3://{bucket}/tags/{year}/{month}'.format(**locals()),}
+              )
+          
+              return True
+
 
   QueryAthenaFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Lambda::Function
     Properties:
-      Handler: lambdas.query_athena
+      Handler: index.handler
       Runtime: python3.6
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AmazonAthenaFullAccess
-        - AmazonS3FullAccess
+      Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           TAG_KEY: !Ref TagKeyParam
           ATHENA_DB: !Ref AthenaDBParam
           ATHENA_TABLE: !Ref AthenaTableParam
-
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          
+          def handler(event, context):
+            
+              # Pull relevant env
+              tag_key = os.environ['TAG_KEY']
+              db = os.environ['ATHENA_DB']
+              table = os.environ['ATHENA_TABLE']
+          
+              # Get info from event
+              key = event['Records'][0]['s3']['object']['key']
+              year, month = key.split('/')[1:3]
+              bucket = event['Records'][0]['s3']['bucket']['name']
+          
+              # Init boto clients
+              athena = boto3.client('athena')
+              s3 = boto3.resource('s3')
+          
+              # Read tags out of S3
+              obj = s3.Object(bucket, key)
+              raw_tag_list = obj.get()['Body'].read().decode('utf-8')
+              tag_list = [t.strip('"') for t in raw_tag_list.split()[1:]]
+          
+              # Query for each tag and month
+              for tag_value in tag_list:
+          
+                  # Build query
+                  query = "SELECT * FROM {table} WHERE resourcetags_user_{tag_key}='{tag_value}' AND year='{year}' AND month='{month}';".format(**locals())
+          
+                  # Query athena
+                  response = athena.start_query_execution(
+                      QueryString=query,
+                      QueryExecutionContext={'Database': db,},
+                      ResultConfiguration={'OutputLocation': 's3://{bucket}/athena_out/{year}/{month}/{tag_value}'.format(**locals()),}
+                  )
+          
+              return True
+ 
   CopyFinalCSVFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Lambda::Function
     Properties:
-      Handler: lambdas.copy_final_csv
+      Handler: index.handler
       Runtime: python3.6
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AmazonAthenaFullAccess
-        - AmazonS3FullAccess
+      Role: !GetAtt LambdaExecutionRole.Arn
       Environment:
         Variables:
           TAG_KEY: !Ref TagKeyParam
           ATHENA_DB: !Ref AthenaDBParam
           ATHENA_TABLE: !Ref AthenaTableParam
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+          
+          def handler(event, context):
+            
+              # Pull relevant env
+              tag_key = os.environ['TAG_KEY']
+              db = os.environ['ATHENA_DB']
+              table = os.environ['ATHENA_TABLE']
+          
+              # Get info from event
+              key = event['Records'][0]['s3']['object']['key']
+              print(key)
+              year, month, tag_value = key.split('/')[1:4]
+              bucket = event['Records'][0]['s3']['bucket']['name']
+          
+              # Init boto clients
+              s3 = boto3.client('s3')
+          
+              # Move file
+              s3.copy_object(
+                  Bucket=bucket,
+                  CopySource='{bucket}/{key}'.format(**locals()),
+                  Key='reports/{tag_value}/{year}-{month}-cur.csv'.format(**locals())
+              )
+          
+              return True 
 
   QueryAthenaS3Permission:
     Type: 'AWS::Lambda::Permission'
@@ -94,7 +253,7 @@ Resources:
       NotificationConfiguration:
         LambdaConfigurations:
           - Function: !GetAtt QueryAthenaFunction.Arn
-            Event: "s3:ObjectCreated:*"
+            Event: 's3:ObjectCreated:*'
             Filter:
               S3Key:
                 Rules:
@@ -103,7 +262,7 @@ Resources:
                   - Name: suffix
                     Value: .csv
           - Function: !GetAtt CopyFinalCSVFunction.Arn
-            Event: "s3:ObjectCreated:*"
+            Event: 's3:ObjectCreated:*'
             Filter:
               S3Key:
                 Rules:
