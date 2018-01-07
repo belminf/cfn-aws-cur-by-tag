@@ -1,7 +1,7 @@
-# sam-aws-cur-by-tag
+# cfn-aws-cur-by-tag
 
 ## Setup
-Essentially, you need to setup the cost allocation tag, the CUR report, partitioning of that data and deploy these Lambda functions via SAM to get this running.
+Essentially, you need to setup the cost allocation tag, the CUR report, partitioning of that data and deploy these Lambda functions via CloudFormation to get this running.
 
 ### 1. Cost allocation tag
 This could be configured on your AWS Billing Console. See [AWS documentation](http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/activating-tags.html) for details.
@@ -36,7 +36,7 @@ The CloudFormation has 3 parameters that are worth taking a note of:
 * `s3CURBucket`: Bucket where your original CUR reports are saved by AWS (`$CUR_BUCKET` from previous step)
 
 ### 4. Deploy and configure the Lambda functions
-Finally, you could deploy this stack using SAM. The stack consist of an S3 bucket and 3 Lambda functions:
+Finally, you could deploy this CloudFormation stack. The stack consist of an S3 bucket and 3 Lambda functions:
 
 1. `get_tags`: Exports the values of the cost allocation tag you want to breakup your report by.
 2. `query_athena`: Queries Athena for line-items with each value of the cost allocation tag you chose.
@@ -46,23 +46,16 @@ There are two parameters that are important:
 * `TagKeyParam`: The cost allocation tag you want to breakup your reports by.
 * `OutputBucketParam`: The S3 bucket to save the broken up reports.
 
-If you use the CloudFormation stack for the AWS blog post, you could leave `AthenaDBParam` and `AthenaTableParam` with their default values.
-
-To create the Lambda functions using the SAM template in this repo:
+To create the CloudFormation stack:
 
 ```bash
 # Modify the following env vars
 $ TAG_KEY=business_unit
 $ OUTPUT_BUCKET=my-cur-reports
-$ CFN_TEMPLATE=/tmp/serverless-output.yaml 
 $ CFN_STACK=cur-by-tag-stack
-$ SAM_BUCKET=cur-by-tag-code
 
-# Package code and save to S3
-aws cloudformation package --template-file template.yaml --output-template-file ${CFN_TEMPLATE} --s3-bucket ${S3_BUCKET}
-
-# Deploy CloudFormation stack
-aws cloudformation deploy --template-file ${CFN_TEMPLATE} --stack-name ${CFN_STACK} --capabilities CAPABILITY_IAM --parameter-overrides TagKeyParam="${TAG_KEY}" OutputBucketParam="${OUTPUT_BUCKET}"
+# Create stack
+aws cloudformation create-stack --template-body file://template.yaml --stack-name ${CFN_STACK} --capabilities CAPABILITY_IAM --parameters ParameterKey=TagKeyParam,ParameterValue="${TAG_KEY}" ParameterKey=OutputBucketParam,ParameterValue=${S3_BUCKET}
 
 ```
 
