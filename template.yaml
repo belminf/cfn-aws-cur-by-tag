@@ -45,7 +45,7 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: arn:aws:logs:*:*:*
+                Resource: '*'
         - PolicyName: s3
           PolicyDocument:
             Version: '2012-10-17'
