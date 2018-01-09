@@ -104,18 +104,30 @@ Resources:
           import re
           
           def handler(event, context):
-          
+
               # Pull relevant env
               tag_key = os.environ['TAG_KEY']
               db = os.environ['ATHENA_DB']
               table = os.environ['ATHENA_TABLE']
               bucket = os.environ['OUTPUT_BUCKET']
           
-              # Get year and month
-              key = event['Records'][0]['s3']['object']['key']
-              date_match = re.match(r'^year=(\d{4})/month=(\d{1,2})/.*\.csv$', key)
+              # Get key
+              manifest_key = event['Records'][0]['s3']['object']['key']
+              manifest_bucket = event['Records'][0]['s3']['bucket']['name']
+              
+              # Init boto clients
+              athena = boto3.client('athena')
+              s3 = boto3.resource('s3')
+              
+              # Read query file and get last line
+              manifest_obj = s3.Object(manifest_bucket, manifest_key)
+              raw_manifest_text = manifest_obj.get()['Body'].read().decode('utf-8')
+              manifest_last_word = raw_manifest_text.split()[-1]
+              
+              # Get date information
+              date_match = re.match(r'^[^:]*:year=(\d{4})/month=(\d{1,2})', manifest_last_word)
               if not date_match:
-                  print('Error: Invalid Athena partition key: {}'.format(key))
+                  print('Error: Invalid manifest last word: {}'.format(manifest_last_word))
                   return False
               year, month = date_match.groups()
           

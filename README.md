@@ -82,7 +82,7 @@ $ CUR_BUCKET=my_athena_cur_data
 $ GET_TAGS_ARN=arn:aws:lambda:us-east-1:xxxxxx:function:xxxxxx-GetTagsFunction-xxxxxxxxx
 
 # Sets up for the Lambda function to be triggered by new data in the S3 bucket
-$ aws s3api put-bucket-notification-configuration --bucket $CUR_BUCKET --notification-configuration '{"LambdaFunctionConfigurations":[{"LambdaFunctionArn":"'${GET_TAGS_ARN}'","Events":["s3:ObjectCreated:*"],"Filter":{"Key":{"FilterRules":[{"Name":"Prefix","Value":"year="},{"Name":"Suffix","Value":".csv"}]}}}]}'
+$ aws s3api put-bucket-notification-configuration --bucket $CUR_BUCKET --notification-configuration '{"LambdaFunctionConfigurations":[{"LambdaFunctionArn":"'${GET_TAGS_ARN}'","Events":["s3:ObjectCreated:*"],"Filter":{"Key":{"FilterRules":[{"Name":"Prefix","Value":"aws-athena-query-results/"},{"Name":"Suffix","Value":".txt"}]}}}]}'
 ```
 
 ## Considerations
